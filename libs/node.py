@@ -14,22 +14,21 @@ class Node():
         
     """
 
-    def __init__(self, connection, frame_len, channel, time):
+    def __init__(self, connection, frame_len, channel, time, u_id):
         self.connection = connection
         self.frame_len = frame_len
         self.channel = channel
         self.rate = 0
         self.time = time
-        self.observation = None
-        self.action = None
+        self.u_id = u_id
         
 
-    def send_date(self):
-        if self.channel.time > (self.time):
-            channel.collision = 1
-            channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len) else (self.time + self.frame_len))
-        else:
-            channel.set_timer(self.time + self.frame_len)
+    # def send_data(self):
+    #     if self.channel.time > (self.time):
+    #         channel.collision = 1
+    #         channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len) else (self.time + self.frame_len))
+    #     else:
+    #         channel.set_timer(self.time + self.frame_len)
 
 
 
@@ -40,33 +39,43 @@ class Station(Node):
     Attributes:
         timeout : timeout for current ACK
         timeout_bar : how long should the packet determine it's timet
-        ack_bar
-        ack_time
+        ack_bar : how long when the node can receive ACK
+        ack_time : ack arriving time
         send_time : send finish time of each packet 
-        history time, observation, action, result
-        {Busy,NoFeedback},{Idle,NoFeedback},{Busy,ACK},{Busy,TimeOut},{Idle,TimeOut}
+        observation: {Busy,NoFeedback},{Idle,NoFeedback},{Busy,ACK},{Busy,TimeOut},{Idle,TimeOut}
     """
-    
-    
-    def send_date(self):
+    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar):
+        Node.__init__(self, connection, frame_len, channel, time, u_id)
+        self.timeout_bar = timeout_bar
+        self.ack_bar = ack_bar
+        self.observation = []
+        self.action = [0]
+        self.state = []
+        self.ack_time = []
+        self.timeout = []
+
+
+    def send_data(self):
         if self.channel.time > (self.time):
             self.channel.collision = 1
-            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len) else (self.time + self.frame_len))
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len) else (self.time + self.frame_len), self.u_id, (self.time + self.frame_len), self.time)
             self.timeout.append(self.time + self.frame_len + timeout_bar)
         else:
-            channel.set_timer(self.time + self.frame_len)
+            self.channel.set_timer((self.time + self.frame_len), self.u_id, (self.time + self.frame_len), self.time)
             self.ack_time.append(self.time + self.frame_len + self.ack_bar)
         self.time = self.time + self.frame_len
     
     """
-        Update information, simulation procedure
+        Decision Maker, will be changed to RL&FL
     """
 
     def decision(self, observation):
-        if (self.channel.sate == 1):
+        if (self.time >= self.channel.time):
             return 1
         else:
             return 0
+
+
     def dection(self):
         # detect the channel, observation
         
@@ -77,13 +86,13 @@ class Station(Node):
                 self.ack_time.pop(0)
                 return 3
             if(ACK < self.time):
-                self.timeout.append(ACK - self.ack_bar + timeout_bar)
+                self.timeout.append(ACK - self.ack_bar + self.timeout_bar)
                 self.ack_time.pop(0)
             if(ACK > self.time):
                 break
         time_out = 0
         for timeouts in self.timeout:
-            if(timeouts <= self.time):
+            if(timeouts != 0 and timeouts <= self.time):
                 time_out = 1
                 self.timeout.remove(timeouts)
 
@@ -107,14 +116,15 @@ class Station(Node):
         # decision maker
         self.observation.append(self.dection())
         # take action
-        if self.decision():
-            send_data()
+        if self.decision(0):
+            self.send_data()
 
+        
         # update information
 
-class Ap(Node):
-    """ Access Point Class
+# class Ap(Node):
+#     """ Access Point Class
     
-    Attributes:
+#     Attributes:
         
-    """
+#     """

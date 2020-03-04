@@ -19,8 +19,14 @@ class Channel():
         self.frame_len = None
         self.frame_info = None
         self.collision = 0
-    def set_timer(self, time):
+        self.operator = []
+        self.start = []
+        self.end = []
+    def set_timer(self, time, u_id, end_time, start_time):
         if time > self.time:
+            self.operator.append(u_id)
+            self.start.append(start_time)
+            self.end.append(end_time)
             self.time = time
         else:
             print("ERROR! Please check time before you reset timer in the channel!")
