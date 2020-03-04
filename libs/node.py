@@ -118,7 +118,8 @@ class Station(Node):
         # take action
         if self.decision(0):
             self.send_data()
-
+        else:
+            self.time = self.time + 1
         
         # update information
 

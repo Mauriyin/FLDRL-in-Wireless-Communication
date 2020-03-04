@@ -31,6 +31,9 @@ class Channel():
         else:
             print("ERROR! Please check time before you reset timer in the channel!")
 
+    def update_state(self):
+        
+
     def set_frame(self, frame_type, length, info):
         self.frame_type = frame_type
         self.frame_len = length
