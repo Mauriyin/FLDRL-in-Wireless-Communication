@@ -25,16 +25,6 @@ class Node():
         self.u_id = u_id
         
 
-    # def send_data(self):
-    #     if self.channel.time > (self.time):
-    #         channel.collision = 1
-    #         channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len) else (self.time + self.frame_len))
-    #     else:
-    #         channel.set_timer(self.time + self.frame_len)
-
-
-
-
 class Station(Node):
     """ Station Class
     
@@ -50,7 +40,6 @@ class Station(Node):
         Node.__init__(self, connection, frame_len, channel, time, u_id)
         self.timeout_bar = timeout_bar
         self.ack_bar = ack_bar
-        self.observation = []
         self.action = [0]
         self.state = []
         self.ack_time = []
@@ -208,6 +197,7 @@ class StationDcf(Station):
         else:
             self.channel.set_timer((self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
             self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+            
         self.send_time = self.time + 2
         self.time = self.time + self.frame_len + self.ack_bar
         self.total_pkt_time += self.frame_len
@@ -221,6 +211,86 @@ class StationDcf(Station):
         else:
             slotsToWait = randint(0, (32 * (2 ** (numOfBackoffs-1))))
         return slotsToWait        
+
+class StationRl(Station):
+    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar):
+        Station.__init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar)
+        self.history = []
+        self.observation = 'IDLE' #'BACK' 'IDLE' 'BUSY' 'BOUT' 'IOUT'
+
+
+    def simulate(self, time):
+
+        # Wait time, do nothing
+        if(time <= self.time):
+            # Determine the collison at begining of each transmission (only transmist at the same time could have collision)
+
+            if(time == self.send_time) and (time > 0):
+                # Colliction
+                if(self.channel.collision) and (self.collision == 0):
+                    self.collision = 1
+                    self.timeout.append(self.time + self.timeout_bar)
+                    #reset backoff/dfis here
+                    self.total_pkt_time -= self.frame_len
+                    #print(self.send_time)
+                # No colliction
+                else:
+                    self.ack_time.append(self.time + self.ack_bar)
+                    self.channel.time += self.ack_bar 
+            return    
+        # Detect Channel 
+        self.observation = self.dection()
+
+        #RL Decision
+
+        self.history.append([self.observation, self.action, 'unkonw'])
+        if self.action:
+            self.send_data()
+            
+        else:
+            self.time = self.time + 1
+
+
+    def send_data(self):
+        if self.channel.time > (self.time):
+            self.channel.collision = 1
+            #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + self.ack_bar + 1) else (self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
+            #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
+            #self.time = self.time + self.frame_len + self.timeout_bar
+        else:
+            self.channel.set_timer((self.time + self.frame_len + 1), self.u_id, (self.time + self.frame_len), self.time)
+            #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+        self.send_time = self.time + 2
+        self.time = self.time + self.frame_len
+        self.total_pkt_time += self.frame_len
+
+
+    def dection(self):
+        # detect the channel, observation
+        
+        # Reveive ACK
+        if len(self.ack_time):
+            ACK = self.ack_time[0]
+            if(ACK == self.time):
+                self.ack_time.pop(0)
+                self.history[-1][-1] = 'ACK'
+                return 'BACK'
+
+        if len(self.timeout):
+            timeout = self.timeout[0]
+            if(timeout == self.time):
+                self.timeout.pop(0)
+                self.history[-1][-1] = 'TIMEOUT'
+                if(self.channel.state > self.time):
+                    return 'BOUT'
+                else:
+                    return 'IOUT'
+
+        if(self.channel.state > self.time):
+            return 'BUSY'
+        else:
+            return 'IDLE'
 # class Ap(Node):
 #     """ Access Point Class
     
