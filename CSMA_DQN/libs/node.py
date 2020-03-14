@@ -245,7 +245,7 @@ class StationRl(Station):
                 # No colliction
                 else:
                     self.ack_time.append(self.time + self.ack_bar)
-                    self.channel.time += self.ack_bar 
+                    #self.channel.time += self.ack_bar 
             return    
 
         # RL Decision
@@ -279,14 +279,18 @@ class StationRl(Station):
         if self.channel.time > (self.time):
             self.channel.collision = 1
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
-            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + self.ack_bar + 1) else (self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
+            print("step in collision", self.time, self.channel.time)
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
+            
             #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:
-            self.channel.set_timer((self.time + self.frame_len + 1), self.u_id, (self.time + self.frame_len), self.time)
+            print("step in send", self.time, self.channel.time)
+            self.channel.set_timer((self.time + self.frame_len  + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+            print("after in send", self.time, self.channel.time)
         self.send_time = self.time + 2
-        self.time = self.time + self.frame_len
+        self.time = self.time + self.frame_len + self.ack_bar
         self.total_pkt_time += self.frame_len
 
 
