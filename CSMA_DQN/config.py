@@ -7,6 +7,13 @@ from glob import glob
 import torch
 torch.multiprocessing.set_sharing_strategy('file_system')     
 
+'''
+TODO:
+1. add singleton pattern
+2. save config to log file
+3. add learning rate strategy
+4. support muti-GPU
+'''
 class Config(object):                                                                                
     def __init__(self):
         self.eval_batch_size  =   16
@@ -14,10 +21,11 @@ class Config(object):
         self.eval_num_workers =   32
         self.USE_CUDA         =   torch.cuda.is_available()                                     
         self.NUM_EPOCHS       =   1000   
+        self.stationType      =   "RL" # "Dcf" / "RL"
 
         # Environment Settings
         self.shuffleStationList = True
-        
+
         # DQN Settings
         self.state_size       =  40
         self.n_actions        =  2
@@ -44,7 +52,7 @@ class Config(object):
     def save_config_to_local_file(self):
         pass
 
-    def printConfig(self):
+    def getAllConfig(self):
         config_message = "input_size {}, batch_size {}, evaluate_batch_size {}, NUM_EPOCHS {}, lr {}, device_ids {}, ckp_path {}, load_ckp {}".format(self.input_size, self.batch_size, self.evaluate_batch_size, self.NUM_EPOCHS, self.lr, self.device_ids, self.ckp_path, self.load_ckp)
         # print("==> config\n", config_message)
         return config_message

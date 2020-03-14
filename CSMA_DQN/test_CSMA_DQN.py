@@ -30,11 +30,13 @@ stations_list = []
 total_time = 0
 
 for i in range(station_num):
-    # station = StationDcf(i, frame_len, channel, global_time, i, timeout, ack_len, difs, sifs)
-    station = StationRl(i, frame_len, channel, global_time, i, timeout, ack_len)
+    if cfg.stationType == "Dcf":
+        station = StationDcf(i, frame_len, channel, global_time, i, timeout, ack_len, difs, sifs)
+    elif cfg.stationType == "RL":
+        station = StationRl(i, frame_len, channel, global_time, i, timeout, ack_len)
     stations_list.append(station)
 
-for i in tqdm(range(10000)):
+for i in tqdm(range(cfg.NUM_EPOCHS)):
     for station in stations_list:
         station.simulate(global_time)
     global_time = global_time + 1
