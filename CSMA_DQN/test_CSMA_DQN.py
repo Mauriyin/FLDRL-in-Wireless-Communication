@@ -51,13 +51,13 @@ print("==> total_time:", total_time)
 total_time_channel = 0
 for i in range(len(channel.start)):
     if(i > 0):
-        if (channel.start[i] == channel.start[i-1]):
+        if ((channel.start[i] - channel.start[i-1]) < frame_len):
             continue
     if(i < (len(channel.start)-1)):
-        if(channel.start[i] == channel.start[i+1]):
+        if(channel.start[i] - channel.start[i+1]) < frame_len:
             continue
     total_time_channel += frame_len
 print("==> total_time_channel:", total_time_channel)
-
+print("==> channel time:", channel.time)
 throughput = total_time/channel.time * data_rate * 1500 / 1560
 print("==> throughput:", throughput)

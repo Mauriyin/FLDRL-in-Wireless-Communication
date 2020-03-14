@@ -234,17 +234,17 @@ class StationRl(Station):
         if(time <= self.time):
             # Determine the collison at begining of each transmission (only transmist at the same time could have collision)
 
-            if(time == self.send_time) and (time > 0):
+            if(time == (self.time - 1)) and (time > 0):
                 # Colliction
                 if(self.channel.collision) and (self.collision == 0):
                     self.collision = 1
-                    self.timeout.append(self.time + self.timeout_bar)
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar + 1)
                     #reset backoff/dfis here
                     self.total_pkt_time -= self.frame_len
                     #print(self.send_time)
                 # No colliction
                 else:
-                    self.ack_time.append(self.time + self.ack_bar)
+                    self.ack_time.append(self.time+1)
                     #self.channel.time += self.ack_bar 
             return    
 
@@ -269,6 +269,7 @@ class StationRl(Station):
 
         self.history.append([self.observation, self.action, 'unkonw'])
         if self.action:
+            self.collision = 0
             self.send_data()
             
         else:
@@ -280,7 +281,7 @@ class StationRl(Station):
             self.channel.collision = 1
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             print("step in collision", self.time, self.channel.time)
-            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len  + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
             
             #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
@@ -289,7 +290,7 @@ class StationRl(Station):
             self.channel.set_timer((self.time + self.frame_len  + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
             print("after in send", self.time, self.channel.time)
-        self.send_time = self.time + 2
+        self.send_time = self.time + 50
         self.time = self.time + self.frame_len + self.ack_bar
         self.total_pkt_time += self.frame_len
 
