@@ -81,32 +81,27 @@ class Station(Node):
         # detect the channel, observation
         
         # Reveive ACK
-        while len(self.ack_time):
+        if len(self.ack_time):
             ACK = self.ack_time[0]
             if(ACK == self.time):
                 self.ack_time.pop(0)
-                return 3
-            if(ACK < self.time):
-                self.timeout.append(ACK - self.ack_bar + self.timeout_bar)
-                self.ack_time.pop(0)
-            if(ACK > self.time):
-                break
-        time_out = 0
-        for timeouts in self.timeout:
-            if(timeouts != 0 and timeouts <= self.time):
-                time_out = 1
-                self.timeout.remove(timeouts)
+                self.history[-1][-1] = 'ACK'
+                return 'BACK'
 
-        if time_out:
-            if(self.channel.state==0):
-                return 5
-            else:
-                return 4
+        if len(self.timeout):
+            timeout = self.timeout[0]
+            if(timeout == self.time):
+                self.timeout.pop(0)
+                self.history[-1][-1] = 'TIMEOUT'
+                if(self.channel.state > self.time):
+                    return 'BOUT'
+                else:
+                    return 'IOUT'
 
-        if(self.channel.state==0):
-            return 2
+        if(self.channel.state > self.time):
+            return 'BUSY'
         else:
-            return 1
+            return 'IDLE'
 
 
 
@@ -149,6 +144,9 @@ class StationDcf(Station):
         self.difs_state = 0
         self.backoff = self.binExpBackoff(0)
         self.bin_back = 0
+        self.history = []
+        self.observation = 'IDLE' #'BACK' 'IDLE' 'BUSY' 'BOUT' 'IOUT'
+        self.observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
     
     def simulate(self, time):
 
@@ -161,21 +159,25 @@ class StationDcf(Station):
                         print("ERROR! Send Pkt when backoff is not zero")
                     self.collision = 1
                     self.time = self.time - self.ack_bar + self.timeout_bar
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar + 1)
                     #reset backoff/dfis here
                     self.bin_back += 1
                     self.total_pkt_time -= self.frame_len
                     #print(self.send_time)
                 else:
                     self.bin_back = 0
+                    self.ack_time.append(self.time+1)
                 self.backoff = self.binExpBackoff(self.bin_back)  
             return    
         # Detect Channel 
+        observation = self.dection()
         if(self.channel.state <= self.time):
             if(self.difs_state == 0):
                 self.difs_state = 1
                 self.collision = 0
                 #print("reset difs")
                 self.time += self.difs
+                self.history.append([observation, 0, 'null'])
                 return
             else:
                 if(self.backoff):
@@ -185,8 +187,10 @@ class StationDcf(Station):
             self.time += 1
             self.send_data()
             self.difs_state = 0
+            self.history.append([observation, 1, 'unknow'])
             return
-        
+
+        self.history.append([observation, 0, 'null'])
         self.time = self.time + 1
 
 
@@ -252,11 +256,12 @@ class StationRl(Station):
         self.action = self.model.choose_action(self.state)
 
         # Calculate Reward
-        reward = reward_mc(self.state, self.action, 10)
+        reward = reward_mc(self.state, self.action, 0.9)
         # reward = randint(0,9)
 
         # Detect Channel 
         self.observation = self.dection()
+        #print(self.observation)
         observation_ = self.observation_dict[self.observation] # change observation to number
         next_state = np.concatenate([self.state[2:], [self.action, observation_]])
         self.model.store_transition(self.state, self.action, reward, next_state)

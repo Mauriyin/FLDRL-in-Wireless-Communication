@@ -60,8 +60,10 @@ def reward_transmit(state, channel, n):
     reward = 0
     for ob in observation_list:
         if ob == 1: # "back"
+            #print("Step in BACK!")
             reward = n * reward + 1
         else:
+            #print("Step in Nothing!")
             reward = n * reward - 1
     return reward
 
