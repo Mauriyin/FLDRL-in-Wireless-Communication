@@ -159,18 +159,19 @@ class StationDcf(Station):
                         print("ERROR! Send Pkt when backoff is not zero")
                     self.collision = 1
                     self.time = self.time - self.ack_bar + self.timeout_bar
-                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar + 1)
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar )
                     #reset backoff/dfis here
                     self.bin_back += 1
                     self.total_pkt_time -= self.frame_len
                     #print(self.send_time)
                 else:
                     self.bin_back = 0
-                    self.ack_time.append(self.time+1)
+                    self.ack_time.append(self.time)
                 self.backoff = self.binExpBackoff(self.bin_back)  
             return    
         # Detect Channel 
         observation = self.dection()
+        self.observation = observation
         if(self.channel.state <= self.time):
             if(self.difs_state == 0):
                 self.difs_state = 1
@@ -200,11 +201,11 @@ class StationDcf(Station):
             self.channel.collision = 1
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + self.ack_bar + 1) else (self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
-            self.timeout.append(self.time + self.frame_len + self.timeout_bar)
+            #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:
             self.channel.set_timer((self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
-            self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+            #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
             
         self.send_time = self.time + 2
         self.time = self.time + self.frame_len + self.ack_bar
