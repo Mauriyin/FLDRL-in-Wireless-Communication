@@ -6,17 +6,23 @@ channel = state[-1] = {"action": a, "observation": o}
 action ∈ {"wait", "transmit"}
 reward
 '''
+reward_transmit_list = []
 
-def reward_mc(state, action, n):
-    channel = state[-1]
+def reward_mc(state, action, n, verbose=False):
+    '''
+    channel:
+    state[-2]: action
+    state[-1]: observation
+    '''
+    channel = [state[-2], state[-1]]
     if action == 0:
-        reward = reward_wait(channel)
+        reward = reward_wait(channel, verbose=verbose)
     elif action == 1:
-        reward = reward_transmit(state, channel, n)
+        reward = reward_transmit(state, channel, n, verbose=verbose)
     else:
-        raise Exception("Undefined action!")
+        raise Exception("Undefined action:{}".format(action))
 
-def reward_wait(channel):
+def reward_wait(channel, verbose=False):
     # channel["o"] = observation
     # if observation == "bnf" or observation == "back" or observation == "bto":
     #     reward = 1
@@ -26,15 +32,17 @@ def reward_wait(channel):
     '''
     observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
     '''
-    # TODO Check here
-    if channel in [1,2,3]:
+    if channel[1] in [1,2,3]:
         reward = 1
     else:
         reward = 0
 
+    if verbose:
+        print("in [reward_wait] reward = {}".format(reward))
+
     return reward
 
-def reward_transmit(state, channel, n):
+def reward_transmit(state, channel, n, verbose=False):
     '''
     K = []
     for l, c in enumerate(state):
@@ -49,22 +57,33 @@ def reward_transmit(state, channel, n):
             reward = n * reward - 1
     return reward
     '''
-
-    observation_list = []
+    global reward_transmit_list
+    channel_list = []
     for i in range(int(len(state)/2)):
-        tmp_action = state[i]
-        tmp_observation = state[2*i]
-        if tmp_observation == channel:
-            observation_list.append(tmp_observation)
+        tmp_action = state[2*i]
+        tmp_observation = state[2*i+1]
+        if tmp_action == channel[0] and tmp_observation == channel[1]:
+            channel_list.append([tmp_action, tmp_observation])
 
     reward = 0
-    for ob in observation_list:
-        if ob == 1: # "back"
-            #print("Step in BACK!")
+    for tmp_channel in channel_list:
+        if tmp_channel[1] == 1: # "back"
+            # print("Step in BACK!")
             reward = n * reward + 1
         else:
-            #print("Step in Nothing!")
+            # print("Step in Nothing!")
             reward = n * reward - 1
+
+    # reward = reward - (-6)
+    reward_transmit_list.append(reward)
+
+    if verbose:
+        print("[in reward_transmit]: input Channel::{}, state:{}, reward = {}".format(channel, state, reward))
+        # print("channel_list:", channel_list)
+        print("mean of reward_transmit_list: {}".format(sum(reward_transmit_list)/len(reward_transmit_list)))
+
+    
+    # return abs(reward)
     return reward
 
 

@@ -2,6 +2,7 @@ from random import *
 from model.DQN import DQN
 from config import Config
 import numpy as np
+import torch
 from .monteCarlo import reward_mc
 
 class Node():
@@ -222,16 +223,22 @@ class StationDcf(Station):
         return slotsToWait        
 
 class StationRl(Station):
-    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar):
+    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar, stationId):
         Station.__init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar)
-        cfg = Config()
+        self.cfg = Config()
         self.history = []
         self.observation = 'IDLE' #'BACK' 'IDLE' 'BUSY' 'BOUT' 'IOUT'
         self.observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
         self.model = DQN()
-        self.state = np.zeros(cfg.state_size, int)
+        self.state = np.zeros(self.cfg.state_size, int)
+        self.former_state = np.zeros(self.cfg.state_size, int)
         self.decisionCount = 0
         self.action = 0
+        self.Id = stationId
+        self.epoch = 0
+
+        if self.cfg.loadModel:
+            self.loadModel()
 
     def simulate(self, time):
 
@@ -253,31 +260,29 @@ class StationRl(Station):
                     #self.channel.time += self.ack_bar 
             return    
 
+        # Detect Channel 
+        self.observation = self.dection()
+        observation_ = self.observation_dict[self.observation] # change observation to number
+        self.state[-1]= observation_ # replace -1 in self.state[-1]
+
         # RL Decision
         self.action = self.model.choose_action(self.state)
 
         # Calculate Reward
-        reward = reward_mc(self.state, self.action, 0.9)
-        # reward = randint(0,9)
+        reward = reward_mc(self.state, self.action, 0.9, verbose=self.cfg.verboseReward)
+        self.model.store_transition(self.former_state, self.action, reward, self.state)
 
-        # Detect Channel 
-        self.observation = self.dection()
-        #print(self.observation)
-        observation_ = self.observation_dict[self.observation] # change observation to number
-        next_state = np.concatenate([self.state[2:], [self.action, observation_]])
-        self.model.store_transition(self.state, self.action, reward, next_state)
+        self.former_state = self.state
+        self.state = np.concatenate([self.state[2:], [self.action, -1]])  # using -1 for represent next observation
+
         self.decisionCount += 1
-
         if self.decisionCount > 200:
             self.model.learn()
-
-        self.state = next_state
 
         self.history.append([self.observation, self.action, 'unkonw'])
         if self.action:
             self.collision = 0
             self.send_data()
-            
         else:
             self.time = self.time + 1
 
@@ -326,6 +331,23 @@ class StationRl(Station):
             return 'BUSY'
         else:
             return 'IDLE'
+
+    def saveModel(self):
+        print("==> saving model...")
+        savePath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
+        torch.save({
+                "epoch": (self.epoch + self.cfg.NUM_EPOCHS),
+                "model_state_dict": self.model.state_dict(),
+                }, savePath)
+
+    def loadModel(self):
+        print("==> loading model...")
+        loadPath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
+        checkpoint = torch.load(loadPath)
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.epoch = checkpoint["epoch"]
+        
+
 # class Ap(Node):
 #     """ Access Point Class
     
