@@ -1,4 +1,9 @@
 from random import *
+from model.DQN import DQN
+from config import Config
+import numpy as np
+import torch
+from .monteCarlo import reward_mc
 
 class Node():
     """ Basic Class for the nodes in the network
@@ -77,32 +82,27 @@ class Station(Node):
         # detect the channel, observation
         
         # Reveive ACK
-        while len(self.ack_time):
+        if len(self.ack_time):
             ACK = self.ack_time[0]
             if(ACK == self.time):
                 self.ack_time.pop(0)
-                return 3
-            if(ACK < self.time):
-                self.timeout.append(ACK - self.ack_bar + self.timeout_bar)
-                self.ack_time.pop(0)
-            if(ACK > self.time):
-                break
-        time_out = 0
-        for timeouts in self.timeout:
-            if(timeouts != 0 and timeouts <= self.time):
-                time_out = 1
-                self.timeout.remove(timeouts)
+                self.history[-1][-1] = 'ACK'
+                return 'BACK'
 
-        if time_out:
-            if(self.channel.state==0):
-                return 5
-            else:
-                return 4
+        if len(self.timeout):
+            timeout = self.timeout[0]
+            if(timeout == self.time):
+                self.timeout.pop(0)
+                self.history[-1][-1] = 'TIMEOUT'
+                if(self.channel.state > self.time):
+                    return 'BOUT'
+                else:
+                    return 'IOUT'
 
-        if(self.channel.state==0):
-            return 2
+        if(self.channel.state > self.time):
+            return 'BUSY'
         else:
-            return 1
+            return 'IDLE'
 
 
 
@@ -145,6 +145,9 @@ class StationDcf(Station):
         self.difs_state = 0
         self.backoff = self.binExpBackoff(0)
         self.bin_back = 0
+        self.history = []
+        self.observation = 'IDLE' #'BACK' 'IDLE' 'BUSY' 'BOUT' 'IOUT'
+        self.observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
     
     def simulate(self, time):
 
@@ -157,21 +160,26 @@ class StationDcf(Station):
                         print("ERROR! Send Pkt when backoff is not zero")
                     self.collision = 1
                     self.time = self.time - self.ack_bar + self.timeout_bar
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar )
                     #reset backoff/dfis here
                     self.bin_back += 1
                     self.total_pkt_time -= self.frame_len
                     #print(self.send_time)
                 else:
                     self.bin_back = 0
+                    self.ack_time.append(self.time)
                 self.backoff = self.binExpBackoff(self.bin_back)  
             return    
         # Detect Channel 
+        observation = self.dection()
+        self.observation = observation
         if(self.channel.state <= self.time):
             if(self.difs_state == 0):
                 self.difs_state = 1
                 self.collision = 0
                 #print("reset difs")
                 self.time += self.difs
+                self.history.append([observation, 0, 'null'])
                 return
             else:
                 if(self.backoff):
@@ -181,8 +189,10 @@ class StationDcf(Station):
             self.time += 1
             self.send_data()
             self.difs_state = 0
+            self.history.append([observation, 1, 'unknow'])
             return
-        
+
+        self.history.append([observation, 0, 'null'])
         self.time = self.time + 1
 
 
@@ -192,11 +202,11 @@ class StationDcf(Station):
             self.channel.collision = 1
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + self.ack_bar + 1) else (self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
-            self.timeout.append(self.time + self.frame_len + self.timeout_bar)
+            #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:
             self.channel.set_timer((self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
-            self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+            #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
             
         self.send_time = self.time + 2
         self.time = self.time + self.frame_len + self.ack_bar
@@ -213,11 +223,22 @@ class StationDcf(Station):
         return slotsToWait        
 
 class StationRl(Station):
-    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar):
+    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar, stationId):
         Station.__init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar)
+        self.cfg = Config()
         self.history = []
         self.observation = 'IDLE' #'BACK' 'IDLE' 'BUSY' 'BOUT' 'IOUT'
+        self.observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
+        self.model = DQN()
+        self.state = np.zeros(self.cfg.state_size, int)
+        self.former_state = np.zeros(self.cfg.state_size, int)
+        self.decisionCount = 0
+        self.action = 0
+        self.Id = stationId
+        self.epoch = 0
 
+        if self.cfg.loadModel:
+            self.loadModel()
 
     def simulate(self, time):
 
@@ -225,28 +246,43 @@ class StationRl(Station):
         if(time <= self.time):
             # Determine the collison at begining of each transmission (only transmist at the same time could have collision)
 
-            if(time == self.send_time) and (time > 0):
+            if(time == (self.time - 1)) and (time > 0):
                 # Colliction
                 if(self.channel.collision) and (self.collision == 0):
                     self.collision = 1
-                    self.timeout.append(self.time + self.timeout_bar)
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar + 1)
                     #reset backoff/dfis here
                     self.total_pkt_time -= self.frame_len
                     #print(self.send_time)
                 # No colliction
                 else:
-                    self.ack_time.append(self.time + self.ack_bar)
-                    self.channel.time += self.ack_bar 
+                    self.ack_time.append(self.time+1)
+                    #self.channel.time += self.ack_bar 
             return    
+
         # Detect Channel 
         self.observation = self.dection()
+        observation_ = self.observation_dict[self.observation] # change observation to number
+        self.state[-1]= observation_ # replace -1 in self.state[-1]
 
-        #RL Decision
+        # RL Decision
+        self.action = self.model.choose_action(self.state)
+
+        # Calculate Reward
+        reward = reward_mc(self.state, self.action, 0.9, verbose=self.cfg.verboseReward)
+        self.model.store_transition(self.former_state, self.action, reward, self.state)
+
+        self.former_state = self.state
+        self.state = np.concatenate([self.state[2:], [self.action, -1]])  # using -1 for represent next observation
+
+        self.decisionCount += 1
+        if self.decisionCount > 200:
+            self.model.learn()
 
         self.history.append([self.observation, self.action, 'unkonw'])
         if self.action:
+            self.collision = 0
             self.send_data()
-            
         else:
             self.time = self.time + 1
 
@@ -255,14 +291,18 @@ class StationRl(Station):
         if self.channel.time > (self.time):
             self.channel.collision = 1
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
-            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + self.ack_bar + 1) else (self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
+            print("step in collision", self.time, self.channel.time)
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len  + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
+            
             #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:
-            self.channel.set_timer((self.time + self.frame_len + 1), self.u_id, (self.time + self.frame_len), self.time)
+            print("step in send", self.time, self.channel.time)
+            self.channel.set_timer((self.time + self.frame_len  + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
-        self.send_time = self.time + 2
-        self.time = self.time + self.frame_len
+            print("after in send", self.time, self.channel.time)
+        self.send_time = self.time + 50
+        self.time = self.time + self.frame_len + self.ack_bar
         self.total_pkt_time += self.frame_len
 
 
@@ -291,6 +331,23 @@ class StationRl(Station):
             return 'BUSY'
         else:
             return 'IDLE'
+
+    def saveModel(self):
+        print("==> saving model...")
+        savePath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
+        torch.save({
+                "epoch": (self.epoch + self.cfg.NUM_EPOCHS),
+                "model_state_dict": self.model.state_dict(),
+                }, savePath)
+
+    def loadModel(self):
+        print("==> loading model...")
+        loadPath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
+        checkpoint = torch.load(loadPath)
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.epoch = checkpoint["epoch"]
+        
+
 # class Ap(Node):
 #     """ Access Point Class
     
