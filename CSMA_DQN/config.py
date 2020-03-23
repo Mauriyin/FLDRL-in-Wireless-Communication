@@ -20,11 +20,14 @@ class Config(object):
         self.num_workers      =   32
         self.eval_num_workers =   32
         self.USE_CUDA         =   torch.cuda.is_available()                                     
-        self.NUM_EPOCHS       =   1000   
+        self.NUM_EPOCHS       =   10000
         self.stationType      =   "RL" # "Dcf" / "RL"
 
         # Environment Settings
         self.shuffleStationList = True
+        self.modelSavePath    =  "./weight/"
+        self.saveModel        =  True
+        self.loadModel        =  False
 
         # DQN Settings
         self.state_size       =  40
@@ -38,11 +41,20 @@ class Config(object):
         self.epsilon_min      =  0.01
         self.epsilon_decay    =  0.995
 
+        # Debug settings
+        self.verboseReward    = True
+        
         # GPU Settings
         # TODO support muti-GPU
         self.device_ids       =   [0]
         self.main_gpu_id      =   0
         torch.cuda.set_device(self.main_gpu_id)
+
+        # check path
+        pathToCheck = [self.modelSavePath]
+        for path in pathToCheck:
+            if not os.path.exists(path):
+                os.mkdir(path)
 
     # TODO set learning rate strategy
     def get_lr(self,epoch):

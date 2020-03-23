@@ -33,10 +33,16 @@ for i in range(station_num):
     if cfg.stationType == "Dcf":
         station = StationDcf(i, frame_len, channel, global_time, i, timeout, ack_len, difs, sifs)
     elif cfg.stationType == "RL":
-        station = StationRl(i, frame_len, channel, global_time, i, timeout, ack_len)
+        station = StationRl(i, frame_len, channel, global_time, i, timeout, ack_len, (i+1))
     stations_list.append(station)
 
-for i in tqdm(range(cfg.NUM_EPOCHS)):
+if cfg.stationType == "Dcf":
+    startEpoch = 0
+elif cfg.stationType == "RL":
+    startEpoch = stations_list[0].epoch
+
+print("==> startEpoch: ", startEpoch)
+for i in tqdm(range(startEpoch, startEpoch+cfg.NUM_EPOCHS)):
     for station in stations_list:
         station.simulate(global_time)
     global_time = global_time + 1
@@ -47,17 +53,20 @@ for i in tqdm(range(cfg.NUM_EPOCHS)):
 
 for station in stations_list:
     total_time += station.total_pkt_time
+
+    if cfg.stationType == "RL":
+        station.saveModel()
 print("==> total_time:", total_time)
 total_time_channel = 0
 for i in range(len(channel.start)):
     if(i > 0):
-        if (channel.start[i] == channel.start[i-1]):
+        if ((channel.start[i] - channel.start[i-1]) < frame_len):
             continue
     if(i < (len(channel.start)-1)):
-        if(channel.start[i] == channel.start[i+1]):
+        if(channel.start[i] - channel.start[i+1]) < frame_len:
             continue
     total_time_channel += frame_len
 print("==> total_time_channel:", total_time_channel)
-
+print("==> channel time:", channel.time)
 throughput = total_time/channel.time * data_rate * 1500 / 1560
 print("==> throughput:", throughput)
