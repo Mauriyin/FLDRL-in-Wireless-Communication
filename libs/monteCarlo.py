@@ -64,7 +64,12 @@ def reward_transmit(state, channel, n, verbose=False):
         tmp_observation = state[2*i+1]
         if tmp_action == channel[0] and tmp_observation == channel[1]:
             channel_list.append([tmp_action, tmp_observation])
-
+#     for i in range(int(len(state)/2) - 1):
+#         tmp_action = state[2*i]
+#         tmp_observation = state[2*i+1]
+#         if tmp_action == channel[0] and tmp_observation == channel[1] and tmp_observation != 1 and tmp_observation != 3:
+#             channel_list.append([state[2*(i+1)], state[2*(i+1)+1]])
+    
     reward = 0
     for tmp_channel in channel_list:
         if tmp_channel[1] == 1: # "back"

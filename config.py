@@ -27,12 +27,12 @@ class Config(object):
         self.shuffleStationList = True
         self.modelSavePath    =  "./weight/"
         self.saveModel        =  True
-        self.loadModel        =  True
+        self.loadModel        =  False
 
         # DQN Settings
-        self.state_size       =  40
+        self.state_size       =  500
         self.n_actions        =  2
-        self.memory_size      =  500
+        self.memory_size      =  1000
         self.replace_target_iter = 200
         self.batch_size       =  32
         self.learning_rate    =  0.01

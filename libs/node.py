@@ -296,7 +296,6 @@ class StationRl(Station):
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             print("step in collision", self.time, self.channel.time)
             self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len  + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
-            self.collision_times += 1
             #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:

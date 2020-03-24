@@ -19,6 +19,7 @@ lib64/
 parts/
 sdist/
 var/
+weight/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -116,3 +117,8 @@ output/
 
 # Pytorch
 *.pth
+
+#RAR
+*.rar
+*.zip
+*.tar
