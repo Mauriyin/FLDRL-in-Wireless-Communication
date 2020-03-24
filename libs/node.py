@@ -51,6 +51,7 @@ class Station(Node):
         self.timeout = []
         self.send_time = 0
         self.collision = 0
+        self.collision_times = 0
         self.total_pkt_time = 0
 
     def send_data(self):
@@ -236,6 +237,7 @@ class StationRl(Station):
         self.action = 0
         self.Id = stationId
         self.epoch = 0
+        
 
         if self.cfg.loadModel:
             self.loadModel()
@@ -250,13 +252,14 @@ class StationRl(Station):
                 # Colliction
                 if(self.channel.collision) and (self.collision == 0):
                     self.collision = 1
-                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar + 1)
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar)
                     #reset backoff/dfis here
                     self.total_pkt_time -= self.frame_len
+                    self.collision_times += 1
                     #print(self.send_time)
                 # No colliction
                 else:
-                    self.ack_time.append(self.time+1)
+                    self.ack_time.append(self.time)
                     #self.channel.time += self.ack_bar 
             return    
 
@@ -293,7 +296,7 @@ class StationRl(Station):
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
             print("step in collision", self.time, self.channel.time)
             self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len  + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
-            
+            self.collision_times += 1
             #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:
