@@ -82,24 +82,6 @@ class Station(Node):
     def dection(self):
         # detect the channel, observation
         
-        # Reveive ACK
-        if len(self.ack_time):
-            ACK = self.ack_time[0]
-            if(ACK == self.time):
-                self.ack_time.pop(0)
-                self.history[-1][-1] = 'ACK'
-                return 'BACK'
-
-        if len(self.timeout):
-            timeout = self.timeout[0]
-            if(timeout == self.time):
-                self.timeout.pop(0)
-                self.history[-1][-1] = 'TIMEOUT'
-                if(self.channel.state > self.time):
-                    return 'BOUT'
-                else:
-                    return 'IOUT'
-
         if(self.channel.state > self.time):
             return 'BUSY'
         else:
@@ -165,9 +147,11 @@ class StationDcf(Station):
                     #reset backoff/dfis here
                     self.bin_back += 1
                     self.total_pkt_time -= self.frame_len
+                    self.history[-1][-1] = 2
                     #print(self.send_time)
                 else:
                     self.bin_back = 0
+                    self.history[-1][-1] = 1
                     self.ack_time.append(self.time)
                 self.backoff = self.binExpBackoff(self.bin_back)  
             return    
@@ -180,7 +164,7 @@ class StationDcf(Station):
                 self.collision = 0
                 #print("reset difs")
                 self.time += self.difs
-                self.history.append([observation, 0, 'null'])
+                self.history.append([observation, 0, 0])
                 return
             else:
                 if(self.backoff):
@@ -190,10 +174,10 @@ class StationDcf(Station):
             self.time += 1
             self.send_data()
             self.difs_state = 0
-            self.history.append([observation, 1, 'unknow'])
+            self.history.append([observation, 1, 0])
             return
 
-        self.history.append([observation, 0, 'null'])
+        self.history.append([observation, 0, 0])
         self.time = self.time + 1
 
 
