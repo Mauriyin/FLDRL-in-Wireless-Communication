@@ -8,17 +8,17 @@ reward
 '''
 reward_transmit_list = []
 
-def reward_mc(state, action, n, verbose=False):
+def reward_mc(state, action, n, result, verbose=False):
     '''
     channel:
     state[-2]: action
     state[-1]: observation
     '''
-    channel = [state[-2], state[-1]]
+    channel = [action, state[-1]]
     if action == 0:
         reward = reward_wait(channel, verbose=verbose)
     elif action == 1:
-        reward = reward_transmit(state, channel, n, verbose=verbose)
+        reward = reward_transmit(state, channel, n, result, verbose=verbose)
     else:
         raise Exception("Undefined action:{}".format(action))
 
@@ -42,7 +42,7 @@ def reward_wait(channel, verbose=False):
 
     return reward
 
-def reward_transmit(state, channel, n, verbose=False):
+def reward_transmit(state, channel, n, result, verbose=False):
     '''
     K = []
     for l, c in enumerate(state):
@@ -59,11 +59,12 @@ def reward_transmit(state, channel, n, verbose=False):
     '''
     global reward_transmit_list
     channel_list = []
-    for i in range(int(len(state)/2)):
-        tmp_action = state[2*i]
+    for i in range(int(len(state)/2)-1):
+        tmp_action = state[2*i+2]
         tmp_observation = state[2*i+1]
+        tmp_result = result[i]
         if tmp_action == channel[0] and tmp_observation == channel[1]:
-            channel_list.append([tmp_action, tmp_observation])
+            channel_list.append([tmp_action, tmp_observation, tmp_result])
 #     for i in range(int(len(state)/2) - 1):
 #         tmp_action = state[2*i]
 #         tmp_observation = state[2*i+1]
@@ -72,7 +73,7 @@ def reward_transmit(state, channel, n, verbose=False):
     
     reward = 0
     for tmp_channel in channel_list:
-        if tmp_channel[1] == 1: # "back"
+        if tmp_channel[2] == 1: # "back"
             # print("Step in BACK!")
             reward = n * reward + 1
         else:
