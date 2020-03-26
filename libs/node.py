@@ -237,6 +237,8 @@ class StationRl(Station):
         self.action = 0
         self.Id = stationId
         self.epoch = 0
+        result_size = int(self.cfg.state_size/2)
+        self.result = np.zeros(result_size, int) #0 unknow 1 ACK 2 TIMEOUT
         
 
         if self.cfg.loadModel:
@@ -248,7 +250,7 @@ class StationRl(Station):
         if(time <= self.time):
             # Determine the collison at begining of each transmission (only transmist at the same time could have collision)
 
-            if(time == (self.time - 1)) and (time > 0):
+            if(time == self.time) and (time > 0):
                 # Colliction
                 if(self.channel.collision) and (self.collision == 0):
                     self.collision = 1
@@ -256,11 +258,16 @@ class StationRl(Station):
                     #reset backoff/dfis here
                     self.total_pkt_time -= self.frame_len
                     self.collision_times += 1
+                    self.result[-1] = 2
                     #print(self.send_time)
                 # No colliction
                 else:
-                    self.ack_time.append(self.time)
-                    #self.channel.time += self.ack_bar 
+                    self.ack_time.append(self.time) 
+                    if self.send_time == 1:
+                        self.channel.time += self.ack_bar
+                        self.time += self.ack_bar+1
+                        self.send_time = 0
+                        self.result[-1] = 1
             return    
 
         # Detect Channel 
@@ -269,17 +276,21 @@ class StationRl(Station):
         self.state[-1]= observation_ # replace -1 in self.state[-1]
 
         # RL Decision
-        self.action = self.model.choose_action(self.state)
+        if self.observation == 'IDLE':
+            self.action = self.model.choose_action(self.state)
+        else:
+            self.action = 0
 
         # Calculate Reward
-        reward = reward_mc(self.state, self.action, 0.9, verbose=self.cfg.verboseReward)
+        self.result = np.concatenate([self.result[1:],[0]])
+        reward = reward_mc(self.state, self.action, 0.9, self.result, verbose=self.cfg.verboseReward)
         self.model.store_transition(self.former_state, self.action, reward, self.state)
 
         self.former_state = self.state
         self.state = np.concatenate([self.state[2:], [self.action, -1]])  # using -1 for represent next observation
 
         self.decisionCount += 1
-        if self.decisionCount > 200:
+        if self.decisionCount > 20:
             self.model.learn()
 
         self.history.append([self.observation, self.action, 'unkonw'])
@@ -294,17 +305,18 @@ class StationRl(Station):
         if self.channel.time > (self.time):
             self.channel.collision = 1
             #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
-            print("step in collision", self.time, self.channel.time)
-            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len  + self.ack_bar ) else (self.time + self.frame_len + + self.ack_bar ), self.u_id, (self.time + self.frame_len), self.time)
+            #print("step in collision", self.time, self.channel.time)
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.frame_len + 1) else (self.time + self.frame_len + 1), self.u_id, (self.time + self.frame_len), self.time)
             #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
             #self.time = self.time + self.frame_len + self.timeout_bar
         else:
-            print("step in send", self.time, self.channel.time)
-            self.channel.set_timer((self.time + self.frame_len  + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
+            #print("step in send", self.time, self.channel.time)
+            self.channel.set_timer((self.time + self.frame_len  + 1), self.u_id, (self.time + self.frame_len), self.time)
+        self.send_time = 1
             #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
-            print("after in send", self.time, self.channel.time)
-        self.send_time = self.time + 50
-        self.time = self.time + self.frame_len + self.ack_bar
+            #print("after in send", self.time, self.channel.time)
+        #self.send_time = self.time + 50
+        self.time = self.time + self.frame_len
         self.total_pkt_time += self.frame_len
 
 
@@ -312,23 +324,22 @@ class StationRl(Station):
         # detect the channel, observation
         
         # Reveive ACK
-        if len(self.ack_time):
-            ACK = self.ack_time[0]
-            if(ACK == self.time):
-                self.ack_time.pop(0)
-                self.history[-1][-1] = 'ACK'
-                return 'BACK'
+        # if len(self.ack_time):
+        #     ACK = self.ack_time[0]
+        #     if(ACK == self.time):
+        #         self.ack_time.pop(0)
+        #         self.history[-1][-1] = 'ACK'
+        #         return 'BACK'
 
-        if len(self.timeout):
-            timeout = self.timeout[0]
-            if(timeout == self.time):
-                self.timeout.pop(0)
-                self.history[-1][-1] = 'TIMEOUT'
-                if(self.channel.state > self.time):
-                    return 'BOUT'
-                else:
-                    return 'IOUT'
-
+        # if len(self.timeout):
+        #     timeout = self.timeout[0]
+        #     if(timeout == self.time):
+        #         self.timeout.pop(0)
+        #         self.history[-1][-1] = 'TIMEOUT'
+        #         if(self.channel.state > self.time):
+        #             return 'BOUT'
+        #         else:
+        #             return 'IOUT'
         if(self.channel.state > self.time):
             return 'BUSY'
         else:

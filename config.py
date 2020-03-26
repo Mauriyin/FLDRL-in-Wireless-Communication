@@ -20,7 +20,7 @@ class Config(object):
         self.num_workers      =   32
         self.eval_num_workers =   32
         self.USE_CUDA         =   torch.cuda.is_available()                                     
-        self.NUM_EPOCHS       =   10000
+        self.NUM_EPOCHS       =   30000
         self.stationType      =   "RL" # "Dcf" / "RL"
 
         # Environment Settings
@@ -30,7 +30,7 @@ class Config(object):
         self.loadModel        =  False
 
         # DQN Settings
-        self.state_size       =  500
+        self.state_size       =  40
         self.n_actions        =  2
         self.memory_size      =  1000
         self.replace_target_iter = 200
