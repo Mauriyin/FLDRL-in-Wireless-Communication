@@ -224,7 +224,6 @@ class StationRl(Station):
         result_size = int(self.cfg.state_size/2)
         self.result = np.zeros(result_size, int) #0 unknow 1 ACK 2 TIMEOUT
         
-
         if self.cfg.loadModel:
             self.loadModel()
 
@@ -262,12 +261,14 @@ class StationRl(Station):
         # RL Decision
         if self.observation == 'IDLE':
             self.action = self.model.choose_action(self.state)
+            # print("RL action: ", self.action)
         else:
             self.action = 0
 
         # Calculate Reward
         self.result = np.concatenate([self.result[1:],[0]])
         reward = reward_mc(self.state, self.action, 0.9, self.result, verbose=self.cfg.verboseReward)
+        # print("reward == None? :", reward==None)
         self.model.store_transition(self.former_state, self.action, reward, self.state)
 
         self.former_state = self.state
@@ -334,14 +335,16 @@ class StationRl(Station):
         savePath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
         torch.save({
                 "epoch": (self.epoch + self.cfg.NUM_EPOCHS),
-                "model_state_dict": self.model.state_dict(),
+                "model_state_dict": self.model.model.state_dict(),
+                "target_model_state_dict": self.model.target_model.state_dict()
                 }, savePath)
 
     def loadModel(self):
         print("==> loading model...")
         loadPath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
         checkpoint = torch.load(loadPath)
-        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.model.model.load_state_dict(checkpoint["model_state_dict"])
+        self.model.target_model.load_state_dict(checkpoint["target_model_state_dict"])
         self.epoch = checkpoint["epoch"]
         
 

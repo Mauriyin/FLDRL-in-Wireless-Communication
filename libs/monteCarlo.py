@@ -21,6 +21,7 @@ def reward_mc(state, action, n, result, verbose=False):
         reward = reward_transmit(state, channel, n, result, verbose=verbose)
     else:
         raise Exception("Undefined action:{}".format(action))
+    return reward
 
 def reward_wait(channel, verbose=False):
     # channel["o"] = observation

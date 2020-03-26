@@ -20,7 +20,7 @@ class Config(object):
         self.num_workers      =   32
         self.eval_num_workers =   32
         self.USE_CUDA         =   torch.cuda.is_available()                                     
-        self.NUM_EPOCHS       =   30000
+        self.NUM_EPOCHS       =   1000
         self.stationType      =   "RL" # "Dcf" / "RL"
 
         # Environment Settings
@@ -35,14 +35,14 @@ class Config(object):
         self.memory_size      =  1000
         self.replace_target_iter = 200
         self.batch_size       =  32
-        self.learning_rate    =  0.01
+        self.learning_rate    =  0.0001
         self.gamma            =  0.9
         self.epsilon          =  1
         self.epsilon_min      =  0.01
         self.epsilon_decay    =  0.995
 
         # Debug settings
-        self.verboseReward    = True
+        self.verboseReward    = False
         
         # GPU Settings
         # TODO support muti-GPU

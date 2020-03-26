@@ -11,13 +11,14 @@ TODO: add DEBUG mode config
 '''
 DEBUG = False
 
-def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=0):
-    
+def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=1):
     if DEBUG:
         print("state.shape:{}, q_target.shape:{}".format(state.shape, q_target.shape))
         print("batchsize:{}".format(batch_size))
 
+    # TODO: Attempt different loss and optimizer
     loss_fc = nn.MSELoss().cuda()
+    # loss_fc = nn.CrossEntropyLoss().cuda()
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learningRate, momentum=0.9)
 
@@ -72,6 +73,7 @@ class DQN(nn.Module):
         self.epsilon = cfg.epsilon
         self.epsilon_min = cfg.epsilon_min
         self.epsilon_decay = cfg.epsilon_decay
+        self.loadModel = cfg.loadModel
         
         # self.memory = torch.zeros(self.memory_size, self.state_size*2+2)
         self.memory = np.zeros((self.memory_size, self.state_size*2+2))
@@ -83,13 +85,17 @@ class DQN(nn.Module):
 
     def choose_action(self, state):
         state = state[np.newaxis, :]
-        self.epsilon *= self.epsilon_decay
-        self.epsilon = max(self.epsilon_min, self.epsilon)
-        if np.random.random() < self.epsilon:
-            return np.random.randint(0, 2)
+
+        if not self.loadModel:
+            self.epsilon *= self.epsilon_decay
+            self.epsilon = max(self.epsilon_min, self.epsilon)
+            if np.random.random() < self.epsilon:
+                return np.random.randint(0, 2)
 
         state = Variable(torch.from_numpy(state.astype(float))).float().cuda()
-        action_values = self.model(state)
+        action_values = self.model(state).cpu()
+        # print("state:{}, state.shape:{}".format(state, state.shape))
+        # print("action :", action_values)
         return torch.argmax(action_values)
 
     def forward(self):
