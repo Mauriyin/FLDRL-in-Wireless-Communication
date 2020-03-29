@@ -6,17 +6,16 @@ from libs.node import StationRl
 from libs.channel import Channel
 from tqdm import tqdm
 from config import Config
+from libs.allocateModel import Allocator
 #import matplotlib.pyplot as plt
 
 cfg = Config()
 global_time = 0
 channel = Channel(global_time, [])
 
-
 station_num = 5
 data_rate = 6  # Mbps
 # All the lengeth is a mutible of slot
-
 
 # incule header
 pkt_len = 1560
@@ -40,6 +39,8 @@ for i in range(station_num):
                             global_time, i, timeout, ack_len, (i+1))
     stations_list.append(station)
 
+allocator = Allocator(stations_list, cfg)
+
 if cfg.stationType == "Dcf":
     startEpoch = 0
 elif cfg.stationType == "RL":
@@ -54,12 +55,18 @@ for i in tqdm(range(startEpoch, startEpoch+cfg.NUM_EPOCHS)):
 
     if cfg.shuffleStationList:
         random.shuffle(stations_list)
+        
+    if i % cfg.allocate_iter == 0 and i > startEpoch+cfg.startAllocationEpoch:
+        # print("==> allocate model")
+        allocator.allocateModel()
 
 for station in stations_list:
     total_time += station.total_pkt_time
-
-    if cfg.stationType == "RL" and cfg.saveModel:
+    if cfg.saveModel and cfg.stationType == "RL":
         station.saveModel()
+if cfg.saveModel:
+    allocator.saveBestModel()
+    
 print("==> total_time:", total_time)
 total_time_channel = 0
 
@@ -71,8 +78,11 @@ total_time_channel = 0
 #         continue
 
 for i in range(len(channel.start)):
+    # if(i > 0):
+    #     if ((channel.start[i] - channel.end[i-1]) < 4):
+    #         continue
     if(i > 0):
-        if ((channel.start[i] - channel.end[i-1]) < 4):
+        if ((channel.start[i] - channel.start[i-1]) < frame_len):
             continue
     total_time_channel += frame_len
 
@@ -94,5 +104,3 @@ for station in stations_list:
 #     print(x)
 #     y = [channel.operator[i], channel.operator[i]]
 #     print(y)
-=======
-

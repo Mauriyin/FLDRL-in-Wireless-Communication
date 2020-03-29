@@ -11,3 +11,20 @@ Apply  Deep Reinforcement Learning aided by Federated Learning to Wireless Comun
 
 
 
+#### Reinforcement Learning with Model Allocation
+
+---
+
+###### Notes
+
+- In `config.py`, we only load model but not save model.
+
+  - ```
+    self.saveModel = False
+    self.loadModel = True
+    ```
+
+- Run `python3 test_CSMA_DQN_withModelAllocation.py` to proceed training.
+
+- `Throughput` is about `5.2`-`5.4`
+

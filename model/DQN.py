@@ -11,14 +11,13 @@ TODO: add DEBUG mode config
 '''
 DEBUG = False
 
-def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=1):
+def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=0):
+    # print("in learning!")
     if DEBUG:
         print("state.shape:{}, q_target.shape:{}".format(state.shape, q_target.shape))
         print("batchsize:{}".format(batch_size))
 
-    # TODO: Attempt different loss and optimizer
     loss_fc = nn.MSELoss().cuda()
-    # loss_fc = nn.CrossEntropyLoss().cuda()
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learningRate, momentum=0.9)
 
@@ -36,7 +35,10 @@ def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=1)
 class ResNet(nn.Module):
     def __init__(self, state_size, n_actions):
         super(ResNet, self).__init__()
-        self.h1 = nn.Linear(state_size, 64)
+        self.embedDim = 10
+        self.denseInputDim = self.embedDim * state_size
+        self.embed = nn.Embedding(state_size, self.embedDim)
+        self.h1 = nn.Linear(self.denseInputDim, 64)
         self.h2 = nn.Linear(64, 64)
         self.h3 = nn.Linear(64, 64)
         self.h4 = nn.Linear(64, 64)
@@ -45,7 +47,10 @@ class ResNet(nn.Module):
         self.out = nn.Linear(64, n_actions)
 
     def forward(self, x):
-        h1 = F.relu(self.h1(x))
+        eb = self.embed(x.long())
+        eb = eb.reshape(-1, self.denseInputDim)
+        # print("eb.shape:{}".format(eb.shape))
+        h1 = F.relu(self.h1(eb))
         h2 = F.relu(self.h2(h1))
 
         h3 = F.relu(self.h3(h2))
@@ -82,18 +87,23 @@ class DQN(nn.Module):
 
         self.model = ResNet(self.state_size, self.n_actions).cuda()
         self.target_model = ResNet(self.state_size, self.n_actions).cuda()
+        self.decisionCount = 0
+        self.maxRandomDecisionCount = cfg.maxRandomDecisionCount
 
     def choose_action(self, state):
         state = state[np.newaxis, :]
-
+        self.decisionCount += 1
         if not self.loadModel:
             self.epsilon *= self.epsilon_decay
             self.epsilon = max(self.epsilon_min, self.epsilon)
-            if np.random.random() < self.epsilon:
+            # if np.random.random() < self.epsilon:
+            #     return np.random.randint(0, 2)
+            if self.decisionCount < self.maxRandomDecisionCount:
                 return np.random.randint(0, 2)
+            
 
         state = Variable(torch.from_numpy(state.astype(float))).float().cuda()
-        action_values = self.model(state).cpu()
+        action_values = self.model(state)
         # print("state:{}, state.shape:{}".format(state, state.shape))
         # print("action :", action_values)
         return torch.argmax(action_values)

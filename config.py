@@ -26,8 +26,10 @@ class Config(object):
         # Environment Settings
         self.shuffleStationList = True
         self.modelSavePath    =  "./weight/"
-        self.saveModel        =  True
-        self.loadModel        =  False
+        self.saveModel        =  False
+        self.loadModel        =  True
+        self.allocate_iter    =  50
+        self.startAllocationEpoch = 100
 
         # DQN Settings
         self.state_size       =  40
@@ -40,6 +42,7 @@ class Config(object):
         self.epsilon          =  1
         self.epsilon_min      =  0.01
         self.epsilon_decay    =  0.995
+        self.maxRandomDecisionCount = 50
 
         # Debug settings
         self.verboseReward    = False
