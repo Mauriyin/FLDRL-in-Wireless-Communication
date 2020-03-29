@@ -20,7 +20,7 @@ class Config(object):
         self.num_workers      =   32
         self.eval_num_workers =   32
         self.USE_CUDA         =   torch.cuda.is_available()                                     
-        self.NUM_EPOCHS       =   1000
+        self.NUM_EPOCHS       =   10000
         self.stationType      =   "RL" # "Dcf" / "RL"
 
         # Environment Settings
