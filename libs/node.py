@@ -342,6 +342,7 @@ class StationRl(Station):
     def loadModel(self):
         print("==> loading model...")
         loadPath = self.cfg.modelSavePath + "StationRl_" + str(self.Id) + ".tar"
+        # loadPath = self.cfg.modelSavePath + "StationRl_" + str(3) + ".tar"
         checkpoint = torch.load(loadPath)
         self.model.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.target_model.load_state_dict(checkpoint["target_model_state_dict"])
