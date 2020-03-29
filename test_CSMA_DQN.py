@@ -12,9 +12,11 @@ cfg = Config()
 global_time = 0
 channel = Channel(global_time, [])
 
+
 station_num = 5
 data_rate = 6  # Mbps
 # All the lengeth is a mutible of slot
+
 
 # incule header
 pkt_len = 1560
@@ -76,6 +78,7 @@ for i in range(len(channel.start)):
 
 print("==> total_time_channel:", total_time_channel)
 print("==> channel time:", channel.time)
+
 try:
     throughput = total_time/channel.time * data_rate * 1500 / 1560
     print("==> throughput:", throughput)
@@ -91,3 +94,5 @@ for station in stations_list:
 #     print(x)
 #     y = [channel.operator[i], channel.operator[i]]
 #     print(y)
+=======
+
