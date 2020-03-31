@@ -28,3 +28,11 @@ Apply  Deep Reinforcement Learning aided by Federated Learning to Wireless Comun
 
 - `Throughput` is about `5.2`-`5.4`
 
+###### Training log
+
+| Number of Station | Max Avg Throughput | Total training epoch |
+| ----------------- | ------------------ | -------------------- |
+| 5                 | 5.45               | 10w                  |
+| 10                | 5.46               | 13w                  |
+| 20                | 5.28               | 22w                  |
+
