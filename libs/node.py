@@ -169,6 +169,8 @@ class StationDcf(Station):
             else:
                 if(self.backoff):
                     self.backoff -= 1
+        else:
+            self.difs_state = 0
         if(self.backoff == 0):
             #send packet at this slot, so update timer first 
             self.time += 1
@@ -300,7 +302,7 @@ class StationRl(Station):
         self.send_time = 1
             #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
             #print("after in send", self.time, self.channel.time)
-        #self.send_time = self.time + 50
+        self.send_time = self.time + 50
         self.time = self.time + self.frame_len
         self.total_pkt_time += self.frame_len
 
@@ -355,3 +357,117 @@ class StationRl(Station):
 #     Attributes:
         
 #     """
+
+class StationRTS(Station):
+    """ Station Class
+    
+    Attributes:
+        timeout : timeout for current ACK
+        timeout_bar : how long should the packet determine it's timet
+        ack_bar : how long when the node can receive ACK
+        ack_time : ack arriving time
+        send_time : send finish time of each packet 
+        observation: {Busy,NoFeedback},{Idle,NoFeedback},{Busy,ACK},{Busy,TimeOut},{Idle,TimeOut}
+    """
+    def __init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar, difs, sifs, rts, cts):
+        Station.__init__(self, connection, frame_len, channel, time, u_id, timeout_bar, ack_bar)
+        self.difs = difs
+        self.sifs = sifs
+        self.difs_state = 0
+        self.backoff = self.binExpBackoff(0)
+        self.bin_back = 0
+        self.history = []
+        self.observation = 'IDLE' #'BACK' 'IDLE' 'BUSY' 'BOUT' 'IOUT'
+        self.observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
+        self.rts = rts
+        self.cts = cts
+    
+    def simulate(self, time):
+
+        # Wait time, do nothing
+        if(time <= self.time):
+            # Determine the collison at begining of each transmission (only transmist at the same time could have collision)
+            if(time == (self.send_time)) and (time > 0):
+                if(self.channel.collision) and (self.collision == 0):
+                    if(self.backoff != 0):
+                        print("ERROR! Send Pkt when backoff is not zero")
+                    self.collision = 1
+                    self.time = self.time + self.difs
+                    self.timeout.append(self.time + self.timeout_bar - self.ack_bar )
+                    #reset backoff/dfis here
+                    self.bin_back += 1
+                    #self.total_pkt_time -= self.frame_len
+                    self.history[-1][-1] = 2
+                    #print("collison!")
+                    #print(self.send_time)
+                else:
+                    self.send_data()
+                    self.difs_state = 0
+                    #self.total_pkt_time = self.total_pkt_time + self.frame_len
+                    self.bin_back = 0
+                    self.history[-1][-1] = 1
+                    self.ack_time.append(self.time)
+                self.backoff = self.binExpBackoff(self.bin_back)  
+            return    
+        # Detect Channel 
+        observation = self.dection()
+        self.observation = observation
+        if(self.channel.state <= self.time):
+            if(self.difs_state == 0):
+                self.difs_state = 1
+                self.collision = 0
+                #print("reset difs")
+                self.time += self.difs
+                self.history.append([observation, 0, 0])
+                return
+            else:
+                if(self.backoff):
+                    self.backoff -= 1
+        else:
+            self.difs_state = 0
+        if(self.backoff == 0):
+            #send packet at this slot, so update timer first 
+            self.time += 1
+            self.rts_send()
+            self.difs_state = 0
+            #self.history.append([observation, 1, 0])
+            return
+
+        self.history.append([observation, 0, 0])
+        self.time = self.time + 1
+
+
+
+    def send_data(self):
+        self.channel.set_timer((self.time + self.frame_len + self.ack_bar + 1), self.u_id, (self.time + self.frame_len), self.time)
+        #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+            
+        #self.send_time = self.time + 2
+        self.time = self.time + self.frame_len + self.ack_bar
+        self.total_pkt_time += self.frame_len
+
+    def rts_send(self):
+        if self.channel.time > (self.time):
+            self.channel.collision = 1
+            #print("collison in rts!")
+            #self.channel.set_timer((self.time + self.frame_len + + self.ack_bar), self.u_id, (self.time + self.frame_len), self.time)
+            self.channel.set_timer(self.channel.time if (self.channel.time) > (self.time + self.rts + self.cts + 1) else (self.time + self.rts + self.cts + 1), self.u_id, (self.time + self.rts + self.cts), self.time)
+            #self.timeout.append(self.time + self.frame_len + self.timeout_bar)
+            #self.time = self.time + self.frame_len + self.timeout_bar
+        else:
+            self.channel.set_timer((self.time + self.rts + self.cts + 1), self.u_id, (self.time + self.rts + self.cts), self.time)
+            #self.ack_time.append(self.time + self.frame_len + self.ack_bar)
+            
+        #self.send_time = self.time + 2
+        self.time = self.time + self.rts + self.cts
+        self.send_time = self.time - 1
+        #self.total_pkt_time += self.frame_len
+
+    def binExpBackoff(self,numOfBackoffs):
+        if(numOfBackoffs == 0):
+            slotsToWait = randint(0, 15)
+        elif(numOfBackoffs >=3):
+            slotsToWait = randint(0, 64)
+        else:
+            slotsToWait = randint(0, (32 * (2 ** (numOfBackoffs-1))))
+        return slotsToWait  
