@@ -27,9 +27,9 @@ class Config(object):
         self.shuffleStationList = True
         self.modelSavePath    =  "./weight/"
         self.saveModel        =  False
-        self.loadModel        =  True
-        self.allocate_iter    =  50
-        self.startAllocationEpoch = 100
+        self.loadModel        =  False
+        self.allocate_iter    =  200
+        self.startAllocationEpoch = 5000
 
         # DQN Settings
         self.state_size       =  40

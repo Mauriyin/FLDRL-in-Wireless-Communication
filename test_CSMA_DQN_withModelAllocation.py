@@ -7,7 +7,10 @@ from libs.channel import Channel
 from tqdm import tqdm
 from config import Config
 from libs.allocateModel import Allocator
-#import matplotlib.pyplot as plt
+
+import matplotlib.pyplot as plt
+import pylab as pl
+from mpl_toolkits.axes_grid1 import host_subplot
 
 cfg = Config()
 global_time = 0
@@ -39,7 +42,7 @@ for i in range(station_num):
                             global_time, i, timeout, ack_len, (i+1))
     stations_list.append(station)
 
-allocator = Allocator(stations_list, cfg)
+allocator = Allocator(stations_list, cfg.modelSavePath)
 
 if cfg.stationType == "Dcf":
     startEpoch = 0
@@ -55,9 +58,8 @@ for i in tqdm(range(startEpoch, startEpoch+cfg.NUM_EPOCHS)):
 
     if cfg.shuffleStationList:
         random.shuffle(stations_list)
-        
+
     if i % cfg.allocate_iter == 0 and i > startEpoch+cfg.startAllocationEpoch:
-        # print("==> allocate model")
         allocator.allocateModel()
 
 for station in stations_list:
@@ -66,7 +68,7 @@ for station in stations_list:
         station.saveModel()
 if cfg.saveModel:
     allocator.saveBestModel()
-    
+
 print("==> total_time:", total_time)
 total_time_channel = 0
 
@@ -103,4 +105,51 @@ for station in stations_list:
 #     x = [channel.start[i], channel.end[i]]
 #     print(x)
 #     y = [channel.operator[i], channel.operator[i]]
-#     print(y)
+#     print(y)1
+
+'''
+draw loss figure
+'''
+
+for i in range(len(stations_list)):
+    station = stations_list[i]
+    loss = station.model.lossHitory
+    print(len(loss))
+
+    host = host_subplot(111)  # row=1 col=1 first pic
+    # ajust the right boundary of the plot window
+    plt.subplots_adjust(right=0.8)
+    par1 = host.twinx()   # 共享x轴
+
+    # set labels
+    host.set_xlabel("steps")
+    host.set_ylabel("loss")
+    # par1.set_ylabel("test-accuracy")
+
+    # plot curves
+    # grid = range(min(len(loss), len(loss_2), len(loss_3)))
+    p1, = host.plot(range(len(loss)), loss, label="loss")
+    # p2, = host.plot(range(len(loss_2)), loss_2, label="loss 2")
+
+    # set location of the legend,
+    # 1->rightup corner, 2->leftup corner, 3->leftdown corner
+    # 4->rightdown corner, 5->rightmid ...
+    host.legend(loc=5)
+
+    # set label color
+    host.axis["left"].label.set_color(p1.get_color())
+    # host.axis["left"].label.set_color(p2.get_color())
+    # host.axis["left"].label.set_color(p3.get_color())
+    # par1.axis["right"].label.set_color(p2.get_color())
+
+    # set the range of x axis of host and y axis of par1
+    # host.set_xlim([-200, 5200])
+    # par1.set_ylim([-0.1, 1.1])
+
+    plt.draw()
+    # plt.show()
+    plt.savefig('./fig/Epoch_{}_station_{}.jpg'.format(cfg.NUM_EPOCHS, i))
+    plt.close()
+
+# for station in stations_list:
+#     print(len(station.model.lossHitory))
