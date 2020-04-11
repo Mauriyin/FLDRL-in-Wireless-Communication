@@ -11,34 +11,36 @@ TODO: add DEBUG mode config
 '''
 DEBUG = False
 
-def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=0):
-    # print("in learning!")
+def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=1):
     if DEBUG:
         print("state.shape:{}, q_target.shape:{}".format(state.shape, q_target.shape))
         print("batchsize:{}".format(batch_size))
 
+    # TODO: Attempt different loss and optimizer
     loss_fc = nn.MSELoss().cuda()
+    # loss_fc = nn.CrossEntropyLoss().cuda()
     optimizer = torch.optim.SGD(
         model.parameters(), lr=learningRate, momentum=0.9)
 
+    total_loss = 0
     for epoch in range(epochs):
         optimizer.zero_grad()
         result = model(state)
         loss = loss_fc(result, q_target)
+        total_loss += loss
         loss.backward()
         optimizer.step()
 
         if verbose:
             message = "[in train] epoch{}, loss:{}".format(epoch, loss)
             print(message)
+            
+    return total_loss
 
 class ResNet(nn.Module):
     def __init__(self, state_size, n_actions):
         super(ResNet, self).__init__()
-        self.embedDim = 10
-        self.denseInputDim = self.embedDim * state_size
-        self.embed = nn.Embedding(state_size, self.embedDim)
-        self.h1 = nn.Linear(self.denseInputDim, 64)
+        self.h1 = nn.Linear(state_size, 64)
         self.h2 = nn.Linear(64, 64)
         self.h3 = nn.Linear(64, 64)
         self.h4 = nn.Linear(64, 64)
@@ -47,10 +49,7 @@ class ResNet(nn.Module):
         self.out = nn.Linear(64, n_actions)
 
     def forward(self, x):
-        eb = self.embed(x.long())
-        eb = eb.reshape(-1, self.denseInputDim)
-        # print("eb.shape:{}".format(eb.shape))
-        h1 = F.relu(self.h1(eb))
+        h1 = F.relu(self.h1(x))
         h2 = F.relu(self.h2(h1))
 
         h3 = F.relu(self.h3(h2))
@@ -79,6 +78,7 @@ class DQN(nn.Module):
         self.epsilon_min = cfg.epsilon_min
         self.epsilon_decay = cfg.epsilon_decay
         self.loadModel = cfg.loadModel
+        self.lossHitory = []
         
         # self.memory = torch.zeros(self.memory_size, self.state_size*2+2)
         self.memory = np.zeros((self.memory_size, self.state_size*2+2))
@@ -178,8 +178,9 @@ class DQN(nn.Module):
         q_target[batch_index, action] = torch.from_numpy(reward).float().cuda() + \
             self.gamma * torch.max(q_next, axis=1)[0].float()
 
-        train(self.model, state, q_target, self.learning_rate,
+        loss = train(self.model, state, q_target, self.learning_rate,
               self.batch_size, epochs=1, verbose=0)
+        self.lossHitory.append(loss)
 
     def save_model(self, fn):
         print("==> saving model")
