@@ -15,9 +15,9 @@ Apply  Deep Reinforcement Learning aided by Federated Learning to Wireless Comun
 
 ---
 
-###### Notes
+###### Simulation
 
-- In `config.py`, we only load model but not save model.
+- Please check `config.py` for model loading and saving setups.
 
   - ```
     self.saveModel = False
