@@ -1,22 +1,20 @@
 # FLDRL-in-Wireless-Communication
-Apply  Deep Reinforcement Learning aided by Federated Learning to Wireless Comunication
-## Enhanced Multi Acess using Deep Reinforcement Learning aided by Federated Learning
+Simulation code for Paper:
+```
+@INPROCEEDINGS{FrmaVTC2020,
+  author={L. {Zhang} and H. {Yin} and Z. {Zhou} and S. {Roy} and Y. {Sun}},
+  booktitle={IEEE 92nd Vehicular Technology Conference (VTC2020-Fall)}, 
+  title={Enhancing {WiFi} Multiple Access Performance with Federated Deep Reinforcement Learning}
+  }
+```
+Contributor: Hao Yin, Zhanke Zhou
 
-### Apply Deep RL into FL
-#### Solution: Using [Pysyft](<https://github.com/OpenMined/PySyft>)
-
-- PySyft is a Python library for secure and private Deep Learning.
-- PySyft decouples private data from model training, using [Federated Learning](https://ai.googleblog.com/2017/04/federated-learning-collaborative.html), [Differential Privacy](https://en.wikipedia.org/wiki/Differential_privacy), and [Multi-Party Computation (MPC)](https://en.wikipedia.org/wiki/Secure_multi-party_computation) within the main Deep Learning frameworks like PyTorch and TensorFlow.
-- [Tutorial](<https://github.com/OpenMined/PySyft/tree/master/examples/tutorials>) provides a set of examples on applying RL into FL.
 
 
 
-#### Reinforcement Learning with Model Allocation
+## Simulations
 
----
-
-###### Simulation
-
+#### Author Notes:
 - Please check `config.py` for model loading and saving setups.
 
   - ```
@@ -28,7 +26,7 @@ Apply  Deep Reinforcement Learning aided by Federated Learning to Wireless Comun
 
 - `Throughput` is about `5.2`-`5.4`
 
-###### Training log
+#### Training log
 
 | Number of Station | Max Avg Throughput | Total training epoch |
 | ----------------- | ------------------ | -------------------- |
