@@ -1,5 +1,9 @@
 # FLDRL-in-Wireless-Communication
-Simulation code for Paper:
+- Simulation code for Paper:  
+Lytianyang Zhang<sup>1</sup>
+, Hao Yin<sup>1</sup>, Zhanke Zhou, Sumit Roy, Yaping Sun, *Enhancing WiFi Multiple Access Performance with Federated Deep Reinforcement Learning*, VTC2020-Fall.  
+<sup>1</sup> *Both authors contribute equally to this work*.  
+- Cite our work:
 ```
 @INPROCEEDINGS{FrmaVTC2020,
   author={L. {Zhang} and H. {Yin} and Z. {Zhou} and S. {Roy} and Y. {Sun}},
@@ -7,7 +11,7 @@ Simulation code for Paper:
   title={Enhancing {WiFi} Multiple Access Performance with Federated Deep Reinforcement Learning}
   }
 ```
-Contributor: Hao Yin, Zhanke Zhou
+Contributors: Hao Yin, Zhanke Zhou
 
 
 
