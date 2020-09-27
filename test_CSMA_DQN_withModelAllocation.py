@@ -119,7 +119,7 @@ for i in range(len(stations_list)):
     host = host_subplot(111)  # row=1 col=1 first pic
     # ajust the right boundary of the plot window
     plt.subplots_adjust(right=0.8)
-    par1 = host.twinx()   # 共享x轴
+    par1 = host.twinx()   
 
     # set labels
     host.set_xlabel("steps")

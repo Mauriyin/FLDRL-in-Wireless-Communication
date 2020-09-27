@@ -94,5 +94,5 @@ for station in stations_list:
 #     print(x)
 #     y = [channel.operator[i], channel.operator[i]]
 #     print(y)
-=======
+
 
