@@ -2,6 +2,7 @@ import copy
 import random
 import torch
 
+
 class Allocator:
     def __init__(self, stations_list, modelSavePath):
         self.stations_list = stations_list
@@ -11,12 +12,12 @@ class Allocator:
         self.bestTargetModel = None
         self.allocateDestinatonId = -1
         self.modelSavePath = modelSavePath
-        
+
         # seem useless
         # self.loadBestModel()
-        
+
     def allocateModel(self):
-        stations_list = self.stations_list 
+        stations_list = self.stations_list
         # find best model
         max_total_pkt_time = -1
         max_total_pkt_time_stationIndex = -1
@@ -33,20 +34,22 @@ class Allocator:
         if tmp_best_stationId == self.bestStationId:
             print("best station not change")
             return
-            
+
         self.bestStationId = tmp_best_stationId
-            
+
         print("max_total_pkt_time: ", max_total_pkt_time)
-        
+
         #  and self.allocateDestinatonId != -1:
         if max_total_pkt_time == 0:
             return
-        
+
         # save best model to memory
         self.bestModel = copy.deepcopy(
-            stations_list[max_total_pkt_time_stationIndex].model.model.state_dict())
+            stations_list[max_total_pkt_time_stationIndex].model.model.
+            state_dict())
         self.bestTargetModel = copy.deepcopy(
-            stations_list[max_total_pkt_time_stationIndex].model.target_model.state_dict())
+            stations_list[max_total_pkt_time_stationIndex].model.target_model.
+            state_dict())
 
         # withdraw bestModel from last allocateDestinatonId
         if self.allocateDestinatonId:
@@ -54,12 +57,16 @@ class Allocator:
                 if station.Id != self.allocateDestinatonId:
                     continue
                 random_index = max_total_pkt_time_stationIndex
-                while (random_index in [stations_list.index(station), max_total_pkt_time_stationIndex]):
+                while (random_index in [
+                        stations_list.index(station),
+                        max_total_pkt_time_stationIndex
+                ]):
                     random_index = random.randint(0, self.nStation - 1)
-                print("random_index:{}, stations_list.index(station):{}".format(
-            random_index, stations_list.index(station)))
-                self.copyModelWeight(
-                    random_index, stations_list.index(station))
+                print(
+                    "random_index:{}, stations_list.index(station):{}".format(
+                        random_index, stations_list.index(station)))
+                self.copyModelWeight(random_index,
+                                     stations_list.index(station))
 
         # allocate a random model to staion[ stationIndex ]
         random_index = max_total_pkt_time_stationIndex
@@ -79,26 +86,27 @@ class Allocator:
         self.allocateDestinatonId = stations_list[random_index].Id
 
     def copyModelWeight(self, modelOrgin, modelDes):
-        stations_list=self.stations_list
+        stations_list = self.stations_list
         stations_list[modelDes].model.model.load_state_dict(
             stations_list[modelOrgin].model.model.state_dict())
         stations_list[modelDes].model.target_model.load_state_dict(
             stations_list[modelOrgin].model.target_model.state_dict())
 
     def allocateBestWeight(self, modelDes):
-        stations_list=self.stations_list
+        stations_list = self.stations_list
         stations_list[modelDes].model.model.load_state_dict(self.bestModel)
         stations_list[modelDes].model.target_model.load_state_dict(
             self.bestTargetModel)
-        
+
     def saveBestModel(self):
         print("==> saving best model...")
         savePath = self.modelSavePath + "StationRl_Best.tar"
-        torch.save({
+        torch.save(
+            {
                 "model_state_dict": self.bestModel,
                 "target_model_state_dict": self.bestTargetModel
-                }, savePath)
-        
+            }, savePath)
+
     def loadBestModel(self):
         print("==> loading best model...")
         savePath = self.modelSavePath + "StationRl_Best.tar"
@@ -108,4 +116,3 @@ class Allocator:
             self.bestTargetModel = checkpoint["target_model_state_dict"]
         except:
             print("[Error] can't load best model")
-        

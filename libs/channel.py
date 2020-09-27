@@ -8,9 +8,9 @@ class Channel():
         frame_type : data, control info or ACK
         frame_len : 
         frame_info :
-        collision : if two transmission at the same time, collision happens, set to 1       
+        collision : if two transmission at the same time, collision happens, 
+        set to 1       
     """
-
     def __init__(self, state, frame):
         self.state = state
         self.time = 0
@@ -22,6 +22,7 @@ class Channel():
         self.operator = []
         self.start = []
         self.end = []
+
     def set_timer(self, time, u_id, end_time, start_time):
         if time >= self.time:
             self.operator.append(u_id)
@@ -29,14 +30,16 @@ class Channel():
             self.end.append(int(end_time))
             self.time = time
         else:
-            print("ERROR! Please check time before you reset timer in the channel!")
+            print(
+                "ERROR! Please check time before you reset in the channel!"
+            )
 
     def update_state(self, time):
         self.state = self.time
-        if(self.time <= time):
+        if (self.time <= time):
             self.collision = 0
+
     def set_frame(self, frame_type, length, info):
         self.frame_type = frame_type
         self.frame_len = length
         self.frame_info = info
-

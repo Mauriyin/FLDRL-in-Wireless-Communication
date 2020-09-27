@@ -8,6 +8,7 @@ reward
 '''
 reward_transmit_list = []
 
+
 def reward_mc(state, action, n, result, verbose=False):
     '''
     channel:
@@ -23,17 +24,17 @@ def reward_mc(state, action, n, result, verbose=False):
         raise Exception("Undefined action:{}".format(action))
     return reward
 
+
 def reward_wait(channel, verbose=False):
     # channel["o"] = observation
     # if observation == "bnf" or observation == "back" or observation == "bto":
     #     reward = 1
     # else:
     #     reward = 0
-
     '''
     observation_dict = {'IDLE':0, 'BACK':1, 'BUSY':2, 'BOUT':3, 'IOUT':4}
     '''
-    if channel[1] in [1,2,3]:
+    if channel[1] in [1, 2, 3]:
         reward = 1
     else:
         reward = 0
@@ -42,6 +43,7 @@ def reward_wait(channel, verbose=False):
         print("in [reward_wait] reward = {}".format(reward))
 
     return reward
+
 
 def reward_transmit(state, channel, n, result, verbose=False):
     '''
@@ -60,21 +62,16 @@ def reward_transmit(state, channel, n, result, verbose=False):
     '''
     global reward_transmit_list
     channel_list = []
-    for i in range(int(len(state)/2)-1):
-        tmp_action = state[2*i+2]
-        tmp_observation = state[2*i+1]
+    for i in range(int(len(state) / 2) - 1):
+        tmp_action = state[2 * i + 2]
+        tmp_observation = state[2 * i + 1]
         tmp_result = result[i]
         if tmp_action == channel[0] and tmp_observation == channel[1]:
             channel_list.append([tmp_action, tmp_observation, tmp_result])
-#     for i in range(int(len(state)/2) - 1):
-#         tmp_action = state[2*i]
-#         tmp_observation = state[2*i+1]
-#         if tmp_action == channel[0] and tmp_observation == channel[1] and tmp_observation != 1 and tmp_observation != 3:
-#             channel_list.append([state[2*(i+1)], state[2*(i+1)+1]])
-    
+
     reward = 0
     for tmp_channel in channel_list:
-        if tmp_channel[2] == 1: # "back"
+        if tmp_channel[2] == 1:  # "back"
             # print("Step in BACK!")
             reward = n * reward + 1
         else:
@@ -85,15 +82,11 @@ def reward_transmit(state, channel, n, result, verbose=False):
     reward_transmit_list.append(reward)
 
     if verbose:
-        print("[in reward_transmit]: input Channel::{}, state:{}, reward = {}".format(channel, state, reward))
+        print("[in reward_transmit]: input Channel::{}, state:{}, reward = {}".
+              format(channel, state, reward))
         # print("channel_list:", channel_list)
-        print("mean of reward_transmit_list: {}".format(sum(reward_transmit_list)/len(reward_transmit_list)))
+        print("mean of reward_transmit_list: {}".format(
+            sum(reward_transmit_list) / len(reward_transmit_list)))
 
-    
     # return abs(reward)
     return reward
-
-
-
-
-    
