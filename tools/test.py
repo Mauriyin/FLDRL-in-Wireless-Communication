@@ -9,7 +9,7 @@ global_time = 0
 channel = Channel(global_time, [])
 
 station_num = 50
-data_rate = 6 #Mbps
+data_rate = 6  #Mbps
 #All the lengeth is a mutible of slot
 
 #incule header
@@ -26,7 +26,8 @@ stations_list = []
 total_time = 0
 
 for i in range(station_num):
-    station = StationDcf(i, frame_len, channel, global_time, i, timeout, ack_len, difs, sifs)
+    station = StationDcf(i, frame_len, channel, global_time, i, timeout,
+                         ack_len, difs, sifs)
     stations_list.append(station)
 
 for i in range(100000):
@@ -40,14 +41,14 @@ for station in stations_list:
 print(total_time)
 total_time_channel = 0
 for i in range(len(channel.start)):
-    if(i > 0):
-        if (channel.start[i] == channel.start[i-1]):
+    if (i > 0):
+        if (channel.start[i] == channel.start[i - 1]):
             continue
-    if(i < (len(channel.start)-1)):
-        if(channel.start[i] == channel.start[i+1]):
+    if (i < (len(channel.start) - 1)):
+        if (channel.start[i] == channel.start[i + 1]):
             continue
     total_time_channel += frame_len
 print(total_time_channel)
 
-throughput = total_time/channel.time * data_rate * 1500 / 1560
+throughput = total_time / channel.time * data_rate * 1500 / 1560
 print(throughput)

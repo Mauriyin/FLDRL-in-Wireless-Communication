@@ -1,26 +1,34 @@
+import os
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-import numpy as np
-import os
-from config import Config
 
+from config import Config
 '''
 TODO: add DEBUG mode config
 '''
 DEBUG = False
 
-def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=1):
+
+def train(model,
+          state,
+          q_target,
+          learningRate,
+          batch_size,
+          epochs=1,
+          verbose=1):
     if DEBUG:
-        print("state.shape:{}, q_target.shape:{}".format(state.shape, q_target.shape))
+        print("state.shape:{}, q_target.shape:{}".format(
+            state.shape, q_target.shape))
         print("batchsize:{}".format(batch_size))
 
-    # TODO: Attempt different loss and optimizer
     loss_fc = nn.MSELoss().cuda()
     # loss_fc = nn.CrossEntropyLoss().cuda()
-    optimizer = torch.optim.SGD(
-        model.parameters(), lr=learningRate, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(),
+                                lr=learningRate,
+                                momentum=0.9)
 
     total_loss = 0
     for epoch in range(epochs):
@@ -34,8 +42,9 @@ def train(model, state, q_target, learningRate, batch_size, epochs=1, verbose=1)
         if verbose:
             message = "[in train] epoch{}, loss:{}".format(epoch, loss)
             print(message)
-            
+
     return total_loss
+
 
 class ResNet(nn.Module):
     def __init__(self, state_size, n_actions):
@@ -79,9 +88,9 @@ class DQN(nn.Module):
         self.epsilon_decay = cfg.epsilon_decay
         self.loadModel = cfg.loadModel
         self.lossHitory = []
-        
+
         # self.memory = torch.zeros(self.memory_size, self.state_size*2+2)
-        self.memory = np.zeros((self.memory_size, self.state_size*2+2))
+        self.memory = np.zeros((self.memory_size, self.state_size * 2 + 2))
         self.learn_step_counter = 0
         self.memory_couter = 0
 
@@ -100,7 +109,6 @@ class DQN(nn.Module):
             #     return np.random.randint(0, 2)
             if self.decisionCount < self.maxRandomDecisionCount:
                 return np.random.randint(0, 2)
-            
 
         state = Variable(torch.from_numpy(state.astype(float))).float().cuda()
         action_values = self.model(state)
@@ -112,7 +120,7 @@ class DQN(nn.Module):
         batch_memory = self.memory
         state = batch_memory[:, :self.state_size]
         action = batch_memory[:, self.state_size].astype(int)
-        reward = batch_memory[:, self.state_size+1]
+        reward = batch_memory[:, self.state_size + 1]
         next_state = batch_memory[:, -self.state_size:]
 
         q_eval = self.model.forward(state)
@@ -132,15 +140,20 @@ class DQN(nn.Module):
 
     def pretrain_learn(self, state):
         state = state[np.newaxis, :]
-        init_value = 0.5/(1-self.gamma)
-        q_target = np.ones(3)*init_value
+        init_value = 0.5 / (1 - self.gamma)
+        q_target = np.ones(3) * init_value
         q_target = q_target[np.newaxis, :]
 
-        train(self.model, state, q_target, self.learning_rate,
-              self.batch_size, epochs=1, verbose=0)
+        train(self.model,
+              state,
+              q_target,
+              self.learning_rate,
+              self.batch_size,
+              epochs=1,
+              verbose=0)
 
     def repalce_target_parameters(self):
-        model_state_dict = self.model.state_dict() 
+        model_state_dict = self.model.state_dict()
         self.target_model.load_state_dict(model_state_dict)
 
     def learn(self):
@@ -151,11 +164,11 @@ class DQN(nn.Module):
 
         # sample batch memory from all memory
         if self.memory_couter > self.memory_size:
-            sample_index = np.random.choice(
-                self.memory_size, size=self.batch_size)
+            sample_index = np.random.choice(self.memory_size,
+                                            size=self.batch_size)
         else:
-            sample_index = np.random.choice(
-                self.memory_couter, size=self.batch_size)
+            sample_index = np.random.choice(self.memory_couter,
+                                            size=self.batch_size)
         batch_memory = self.memory[sample_index, :]
 
         # batch memory row: [s, a, r1, r2, s_]
@@ -163,11 +176,12 @@ class DQN(nn.Module):
         # extract state, action, reward, reward2, next_state from batch memory
         state = batch_memory[:, :self.state_size]
         action = batch_memory[:, self.state_size].astype(int)  # float -> int
-        reward = batch_memory[:, self.state_size+1]
+        reward = batch_memory[:, self.state_size + 1]
         next_state = batch_memory[:, -self.state_size:]
 
         state = Variable(torch.from_numpy(state.astype(int))).float().cuda()
-        next_state = Variable(torch.from_numpy(next_state.astype(int))).float().cuda()
+        next_state = Variable(torch.from_numpy(
+            next_state.astype(int))).float().cuda()
 
         q_eval = self.model(state)  # state
         q_next = self.target_model(next_state)  # next state
@@ -175,11 +189,16 @@ class DQN(nn.Module):
         q_target = q_eval.clone()
 
         batch_index = np.arange(self.batch_size, dtype=np.int32)
-        q_target[batch_index, action] = torch.from_numpy(reward).float().cuda() + \
-            self.gamma * torch.max(q_next, axis=1)[0].float()
+        q_target[batch_index, action] = torch.from_numpy(reward).float().cuda()\
+            + self.gamma * torch.max(q_next, axis=1)[0].float()
 
-        loss = train(self.model, state, q_target, self.learning_rate,
-              self.batch_size, epochs=1, verbose=0)
+        loss = train(self.model,
+                     state,
+                     q_target,
+                     self.learning_rate,
+                     self.batch_size,
+                     epochs=1,
+                     verbose=0)
         self.lossHitory.append(loss)
 
     def save_model(self, fn):
