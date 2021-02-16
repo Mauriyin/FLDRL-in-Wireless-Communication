@@ -13,7 +13,7 @@ Lyutianyang Zhang<sup>1</sup>
 ```
 Contributors: Hao Yin, Zhanke Zhou
 
-The paper can be found on arxiv: https://arxiv.org/abs/2102.07019
+The paper can be found https://ieeexplore.ieee.org/document/9348485
 
 
 
